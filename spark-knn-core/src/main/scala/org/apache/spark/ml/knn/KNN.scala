@@ -25,7 +25,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.util.hashing.byteswap64
 
-// features column => vector, input columns => auxiliary columns to return by KNN model
+
 private[ml] trait KNNModelParams extends Params with HasFeaturesCol with HasInputCols {
   /**
     * Param for the column name for returned neighbors.
@@ -101,7 +101,7 @@ private[ml] trait KNNModelParams extends Params with HasFeaturesCol with HasInpu
           idx
       }
       .partitionBy(new HashPartitioner(subTrees.partitions.length))
-
+    println("k: " + $(k))
     // for each partition, search points within corresponding child tree
     val results = searchData.zipPartitions(subTrees) {
       (childData, trees) =>
@@ -115,6 +115,10 @@ private[ml] trait KNNModelParams extends Params with HasFeaturesCol with HasInpu
             }
         }
     }
+
+    //val foo = results.topByKey($(k))(Ordering.by(-_._2))
+      //.map { case (i, seq) => (i, seq) }
+    //println("FOO: " + foo.take(1)(0)._2.length)
 
     // merge results by point index together and keep topK results
     results.topByKey($(k))(Ordering.by(-_._2))
@@ -189,9 +193,20 @@ private[ml] trait KNNParams extends KNNModelParams with HasSeed {
   /** @group getParam */
   def getBalanceThreshold: Double = $(balanceThreshold)
 
+  /**
+    * Param for algorithm type (hybrid, kdtree)
+    *
+    * @group param
+    */
+  val algorithm = new Param[String](this, "algorithm", "subtree algorithm")
+
+  /** @group getParam */
+  def getAlgorithm: String = $(algorithm)
+
+
   setDefault(topTreeSize -> 1000, topTreeLeafSize -> 10, subTreeLeafSize -> 30,
     bufferSize -> -1.0, bufferSizeSampleSizes -> (100 to 1000 by 100).toArray, balanceThreshold -> 0.7,
-    k -> 5, neighborsCol -> "neighbors", distanceCol -> "", maxDistance -> Double.PositiveInfinity)
+    k -> 5, neighborsCol -> "neighbors", distanceCol -> "", maxDistance -> Double.PositiveInfinity, algorithm -> "hybrid")
 
   /**
     * Validates and transforms the input schema.
@@ -377,19 +392,25 @@ class KNN(override val uid: String) extends Estimator[KNNModel] with KNNParams {
   /** @group setParam */
   def setSeed(value: Long): this.type = set(seed, value)
 
+  /** @group setParam */
+  def setAlgorithm(value: String): this.type = set(algorithm, value)
+
   override def fit(dataset: Dataset[_]): KNNModel = {
     val rand = new XORShiftRandom($(seed))
-    //prepare data for model estimation
     val data = dataset.selectExpr($(featuresCol), $(inputCols).mkString("struct(", ",", ")"))
       .rdd
       .map(row => new RowWithVector(row.getAs[Vector](0), row.getStruct(1)))
+
     //sample data to build top-level tree
+
+    println("**** top tree size: "  + $(topTreeSize))
     val sampled = data.sample(withReplacement = false, $(topTreeSize).toDouble / dataset.count(), rand.nextLong()).collect()
     val topTree = MetricTree.build(sampled, $(topTreeLeafSize), rand.nextLong())
     //build partitioner using top-level tree
     val part = new KNNPartitioner(topTree)
-    //noinspection ScalaStyle
-    val repartitioned = new ShuffledRDD[RowWithVector, Null, Null](data.map(v => (v, null)), part).keys
+    val repartitioned: RDD[RowWithVector] = new ShuffledRDD[RowWithVector, Null, Null](data.map(v => (v, null)), part).keys
+
+    println("~~~~ repartitioned: " + repartitioned.getNumPartitions)
 
     val tau =
       if ($(balanceThreshold) > 0 && $(bufferSize) < 0) {
@@ -402,8 +423,15 @@ class KNN(override val uid: String) extends Estimator[KNNModel] with KNNParams {
     val trees = repartitioned.mapPartitionsWithIndex {
       (partitionId, itr) =>
         val rand = new XORShiftRandom(byteswap64($(seed) ^ partitionId))
-        val childTree =
+        val childTree = if($(algorithm) == "kdtree") {
+          KDTree.build(itr.toIndexedSeq, "standard", $(subTreeLeafSize), 0)
+        }
+        else if($(algorithm) == "kdtreeGini"){
+          KDTree.build(itr.toIndexedSeq, "kdtreeGini", $(subTreeLeafSize), 0)
+        }
+        else {
           HybridTree.build(itr.toIndexedSeq, $(subTreeLeafSize), tau, $(balanceThreshold), rand.nextLong())
+        }
 
         Iterator(childTree)
     }.persist(StorageLevel.MEMORY_AND_DISK)

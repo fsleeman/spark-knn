@@ -8,12 +8,12 @@ import org.apache.spark.util.random.XORShiftRandom
 import scala.collection.mutable
 
 /**
- * A [[Tree]] is used to store data points used in k-NN search. It represents
- * a binary tree node. It keeps track of the pivot vector which closely approximate
- * the center of all vectors within the node. All vectors are within the radius of
- * distance to the pivot vector. Finally it knows the number of leaves to help
- * determining partition index.
- */
+  * A [[Tree]] is used to store data points used in k-NN search. It represents
+  * a binary tree node. It keeps track of the pivot vector which closely approximate
+  * the center of all vectors within the node. All vectors are within the radius of
+  * distance to the pivot vector. Finally it knows the number of leaves to help
+  * determining partition index.
+  */
 private[ml] abstract class Tree extends Serializable {
   val leftChild: Tree
   val rightChild: Tree
@@ -25,24 +25,24 @@ private[ml] abstract class Tree extends Serializable {
   def iterator: Iterator[RowWithVector]
 
   /**
-   * k-NN query using pre-built [[Tree]]
-   * @param v vector to query
-   * @param k number of nearest neighbor
-   * @return a list of neighbor that is nearest to the query vector
-   */
+    * k-NN query using pre-built [[Tree]]
+    * @param v vector to query
+    * @param k number of nearest neighbor
+    * @return a list of neighbor that is nearest to the query vector
+    */
   def query(v: Vector, k: Int = 1): Iterable[(RowWithVector, Double)] = query(new VectorWithNorm(v), k)
   def query(v: VectorWithNorm, k: Int): Iterable[(RowWithVector, Double)] = query(new KNNCandidates(v, k)).toIterable
 
   /**
-   * Refine k-NN candidates using data in this [[Tree]]
-   */
+    * Refine k-NN candidates using data in this [[Tree]]
+    */
   private[knn] def query(candidates: KNNCandidates): KNNCandidates
 
   /**
-   * Compute QueryCost defined as || v.center - q || - r
-   * when >= v.r node can be pruned
-   * for MetricNode this can be used to determine which child does queryVector falls into
-   */
+    * Compute QueryCost defined as || v.center - q || - r
+    * when >= v.r node can be pruned
+    * for MetricNode this can be used to determine which child does queryVector falls into
+    */
   private[knn] def distance(candidates: KNNCandidates): Double = distance(candidates.queryVector)
 
   private[knn] def distance(v: VectorWithNorm): Double =
@@ -64,8 +64,8 @@ case object Empty extends Tree {
 
 private[knn]
 case class Leaf (data: IndexedSeq[RowWithVector],
-                    pivot: VectorWithNorm,
-                    radius: Double) extends Tree {
+                 pivot: VectorWithNorm,
+                 radius: Double) extends Tree {
   override val leftChild = Empty
   override val rightChild = Empty
   override val size = data.size
@@ -101,28 +101,28 @@ object Leaf {
 }
 
 /**
- * A [[MetricTree]] represents a MetricNode where data are split into two partitions: left and right.
- * There exists two pivot vectors: leftPivot and rightPivot to determine the partitioning.
- * Pivot vector should be the middle of leftPivot and rightPivot vectors.
- * Points that is closer to leftPivot than to rightPivot belongs to leftChild and rightChild otherwise.
- *
- * During search, because we have information about each child's pivot and radius, we can see if the
- * hyper-sphere intersects with current candidates sphere. If so, we search the child that has the
- * most potential (i.e. the child which has the closest pivot).
- * Once that child has been fully searched, we backtrack to the remaining child and search if necessary.
- *
- * This is much more efficient than naive brute force search. However backtracking can take a lot of time
- * when the number of dimension is high (due to longer time to compute distance and the volume growing much
- * faster than radius).
- */
+  * A [[MetricTree]] represents a MetricNode where data are split into two partitions: left and right.
+  * There exists two pivot vectors: leftPivot and rightPivot to determine the partitioning.
+  * Pivot vector should be the middle of leftPivot and rightPivot vectors.
+  * Points that is closer to leftPivot than to rightPivot belongs to leftChild and rightChild otherwise.
+  *
+  * During search, because we have information about each child's pivot and radius, we can see if the
+  * hyper-sphere intersects with current candidates sphere. If so, we search the child that has the
+  * most potential (i.e. the child which has the closest pivot).
+  * Once that child has been fully searched, we backtrack to the remaining child and search if necessary.
+  *
+  * This is much more efficient than naive brute force search. However backtracking can take a lot of time
+  * when the number of dimension is high (due to longer time to compute distance and the volume growing much
+  * faster than radius).
+  */
 private[knn]
 case class MetricTree(leftChild: Tree,
-                         leftPivot: VectorWithNorm,
-                         rightChild: Tree,
-                         rightPivot: VectorWithNorm,
-                         pivot: VectorWithNorm,
-                         radius: Double
-                          ) extends Tree {
+                      leftPivot: VectorWithNorm,
+                      rightChild: Tree,
+                      rightPivot: VectorWithNorm,
+                      pivot: VectorWithNorm,
+                      radius: Double
+                     ) extends Tree {
   override val size = leftChild.size + rightChild.size
   override val leafCount = leftChild.leafCount + rightChild.leafCount
 
@@ -132,8 +132,8 @@ case class MetricTree(leftChild: Tree,
     lazy val rightQueryCost = rightChild.distance(candidates)
     // only query if at least one of the children is worth looking
     if(candidates.notFull ||
-        leftQueryCost - candidates.maxDistance < leftChild.radius ||
-        rightQueryCost - candidates.maxDistance < rightChild.radius ){
+      leftQueryCost - candidates.maxDistance < leftChild.radius ||
+      rightQueryCost - candidates.maxDistance < rightChild.radius ){
       val remainingChild = {
         if (leftQueryCost <= rightQueryCost) {
           leftChild.query(candidates)
@@ -145,7 +145,7 @@ case class MetricTree(leftChild: Tree,
       }
       // check again to see if the remaining child is still worth looking
       if (candidates.notFull ||
-          remainingChild.distance(candidates) - candidates.maxDistance < remainingChild.radius) {
+        remainingChild.distance(candidates) - candidates.maxDistance < remainingChild.radius) {
         remainingChild.query(candidates)
       }
     }
@@ -155,12 +155,12 @@ case class MetricTree(leftChild: Tree,
 
 object MetricTree {
   /**
-   * Build a (metric)[[Tree]] that facilitate k-NN query
-   *
-   * @param data vectors that contain all training data
-   * @param seed random number generator seed used in pivot point selecting
-   * @return a [[Tree]] can be used to do k-NN query
-   */
+    * Build a (metric)[[Tree]] that facilitate k-NN query
+    *
+    * @param data vectors that contain all training data
+    * @param seed random number generator seed used in pivot point selecting
+    * @return a [[Tree]] can be used to do k-NN query
+    */
   def build(data: IndexedSeq[RowWithVector], leafSize: Int = 1, seed: Long = 0L): Tree = {
     val size = data.size
     if(size == 0) {
@@ -181,7 +181,6 @@ object MetricTree {
         val (leftPartition, rightPartition) = data.partition{
           v => leftPivot.fastSquaredDistance(v.vector) < rightPivot.fastSquaredDistance(v.vector)
         }
-
         MetricTree(
           build(leftPartition, leafSize, rand.nextLong()),
           leftPivot,
@@ -196,24 +195,140 @@ object MetricTree {
 }
 
 /**
- * A [[SpillTree]] represents a SpillNode. Just like [[MetricTree]], it splits data into two partitions.
- * However, instead of partition data into exactly two halves, it contains a buffer zone with size of tau.
- * Left child contains all data left to the center plane + tau (in the leftPivot -> rightPivot direction).
- * Right child contains all data right to the center plane - tau.
- *
- * Search doesn't do backtracking but rather adopt a defeatist search where it search the most prominent
- * child and that child only. The buffer ensures such strategy doesn't result in a poor outcome.
- */
+*
+* KD-Tree
+*/
+
+private[knn]
+case class KDTree(    pivot: VectorWithNorm,
+                      median: Double,
+                      axis: Int,
+                      radius: Double,
+                      leftChild: Tree,
+                      rightChild: Tree
+                 ) extends Tree
+  {
+  override val size = leftChild.size + rightChild.size
+  override val leafCount = leftChild.leafCount + rightChild.leafCount
+
+  override def iterator: Iterator[RowWithVector] = leftChild.iterator ++ rightChild.iterator
+  override def query(candidates: KNNCandidates): KNNCandidates = {
+    lazy val leftQueryCost = leftChild.distance(candidates)
+    lazy val rightQueryCost = rightChild.distance(candidates)
+    // only query if at least one of the children is worth looking
+    if(candidates.notFull ||
+      leftQueryCost - candidates.maxDistance < leftChild.radius ||
+      rightQueryCost - candidates.maxDistance < rightChild.radius){ ///FIXME
+      val remainingChild = {
+        if (leftQueryCost <= rightQueryCost) {
+          leftChild.query(candidates)
+          rightChild
+        } else {
+          rightChild.query(candidates)
+          leftChild
+        }
+      }
+      // check again to see if the remaining child is still worth looking
+      if (candidates.notFull ||
+        remainingChild.distance(candidates) - candidates.maxDistance < remainingChild.radius) {  ///FIXME
+        remainingChild.query(candidates)
+      }
+    }
+    candidates
+  }
+}
+
+object KDTree {
+  /**
+    * Build a (kd)[[Tree]] that facilitate k-NN query
+    *
+    * @param data vectors that contain all training data
+    * @param seed random number generator seed used in pivot point selecting
+    * @return a [[Tree]] can be used to do k-NN query
+    */
+
+
+  def build(data: IndexedSeq[RowWithVector], method: String, leafSize: Int = 1, axis: Int): Tree = {
+    val size = data.size
+    if (size == 0) {
+      Empty
+    } else if (size <= leafSize) {  //FIXME - add support for multiple leaf examples in leaf node, just use the pivot vector?
+      Leaf(data)
+    } else {
+
+      val dataLength = data(0).vector.vector.size
+      val sorted: IndexedSeq[(RowWithVector, Double)] = data.map(x=>(x, x.vector.vector(axis))).sortBy(_._2)
+      val median = sorted((sorted.length/2.0).toInt)._2
+
+      val medianIndex = (sorted.length/2.0).toInt
+
+      val left = sorted.slice(0, medianIndex.toInt).map(x=>x._1)
+      val right = if(sorted.length < 3) IndexedSeq[RowWithVector]()
+      else sorted.slice(medianIndex.toInt, sorted.length).map(x=>x._1)
+
+      val med = sorted(medianIndex)._1.vector
+      val s2 = math.sqrt(data.map(v => med.fastSquaredDistance(v.vector)).max)
+
+      if(method == "kdtreeGini") {
+        def getAxisData(axisIndex: Int) : (Int, Double) ={
+          val sortedX: IndexedSeq[(RowWithVector, Double)] = data.map(x=>(x, x.vector.vector(axisIndex))).sortBy(_._2)
+          val medianIndex = (sorted.length/2.0).toInt
+
+          val left = sortedX.slice(0, medianIndex.toInt).map(x=>x._1)
+          val right = if(sortedX.length < 3) IndexedSeq[RowWithVector]()
+          else sortedX.slice(medianIndex.toInt, sortedX.length).map(x=>x._1)
+
+          val labelsLeft = left.map(x=>x.row(0))
+          val valuesLeft = labelsLeft.groupBy(identity).mapValues(_.size)
+          val giniLeft = valuesLeft.map(x=>math.pow(x._2/size.toDouble,2)).sum
+
+          val labelsRight = right.map(x=>x.row(0))
+          val valuesRight = labelsRight.groupBy(identity).mapValues(_.size)
+          val giniRight = valuesRight.map(x=>math.pow(x._2/size.toDouble,2)).sum
+
+          (axisIndex, max(giniLeft, giniRight))
+
+        }
+        val bestAxis = (0 to dataLength - 1).map(x=>getAxisData(x))
+        val nextAxis = bestAxis.maxBy(_._2)._1
+
+        KDTree(med, median, axis,s2,
+          build(left, method, leafSize, nextAxis),
+          build(right, method, leafSize, nextAxis))
+      }
+      else {
+        val nextAxis: Int = {
+          (axis+1) % dataLength
+        }
+
+        KDTree(med, median, axis,s2,
+          build(left, method, leafSize, nextAxis),
+          build(right, method, leafSize, nextAxis))
+      }
+    }
+  }
+}
+
+
+/**
+  * A [[SpillTree]] represents a SpillNode. Just like [[MetricTree]], it splits data into two partitions.
+  * However, instead of partition data into exactly two halves, it contains a buffer zone with size of tau.
+  * Left child contains all data left to the center plane + tau (in the leftPivot -> rightPivot direction).
+  * Right child contains all data right to the center plane - tau.
+  *
+  * Search doesn't do backtracking but rather adopt a defeatist search where it search the most prominent
+  * child and that child only. The buffer ensures such strategy doesn't result in a poor outcome.
+  */
 private[knn]
 case class SpillTree(leftChild: Tree,
-                                      leftPivot: VectorWithNorm,
-                                      rightChild: Tree,
-                                      rightPivot: VectorWithNorm,
-                                      pivot: VectorWithNorm,
-                                      radius: Double,
-                                      tau: Double,
-                                      bufferSize: Int
-                                       ) extends Tree {
+                     leftPivot: VectorWithNorm,
+                     rightChild: Tree,
+                     rightPivot: VectorWithNorm,
+                     pivot: VectorWithNorm,
+                     radius: Double,
+                     tau: Double,
+                     bufferSize: Int
+                    ) extends Tree {
   override val size = leftChild.size + rightChild.size - bufferSize
   override val leafCount = leftChild.leafCount + rightChild.leafCount
 
@@ -250,13 +365,13 @@ case class SpillTree(leftChild: Tree,
 
 object SpillTree {
   /**
-   * Build a (spill)[[Tree]] that facilitate k-NN query
-   *
-   * @param data vectors that contain all training data
-   * @param tau overlapping size
-   * @param seed random number generators seed used in pivot point selecting
-   * @return a [[Tree]] can be used to do k-NN query
-   */
+    * Build a (spill)[[Tree]] that facilitate k-NN query
+    *
+    * @param data vectors that contain all training data
+    * @param tau overlapping size
+    * @param seed random number generators seed used in pivot point selecting
+    * @return a [[Tree]] can be used to do k-NN query
+    */
   def build(data: IndexedSeq[RowWithVector], leafSize: Int = 1, tau: Double, seed: Long = 0L): Tree = {
     val size = data.size
     if (size == 0) {
@@ -297,20 +412,20 @@ object SpillTree {
 
 object HybridTree {
   /**
-   * Build a (hybrid-spill) `Tree` that facilitate k-NN query
-   *
-   * @param data vectors that contain all training data
-   * @param seed random number generator seed used in pivot point selecting
-   * @param tau overlapping size
-   * @param rho balance threshold
-   * @return a `Tree` can be used to do k-NN query
-   */
+    * Build a (hybrid-spill) `Tree` that facilitate k-NN query
+    *
+    * @param data vectors that contain all training data
+    * @param seed random number generator seed used in pivot point selecting
+    * @param tau overlapping size
+    * @param rho balance threshold
+    * @return a `Tree` can be used to do k-NN query
+    */
   //noinspection ScalaStyle
   def build(data: IndexedSeq[RowWithVector],
-                            leafSize: Int = 1,
-                            tau: Double,
-                            rho: Double = 0.7,
-                            seed: Long = 0L): Tree = {
+            leafSize: Int = 1,
+            tau: Double,
+            rho: Double = 0.7,
+            seed: Long = 0L): Tree = {
     val size = data.size
     if (size == 0) {
       Empty
@@ -365,13 +480,13 @@ object HybridTree {
 }
 
 /**
- * Structure to maintain search progress/results for a single query vector.
- * Internally uses a PriorityQueue to maintain a max-heap to keep track of the
- * next neighbor to evict.
- *
- * @param queryVector vector being searched
- * @param k number of neighbors to return
- */
+  * Structure to maintain search progress/results for a single query vector.
+  * Internally uses a PriorityQueue to maintain a max-heap to keep track of the
+  * next neighbor to evict.
+  *
+  * @param queryVector vector being searched
+  * @param k number of neighbors to return
+  */
 private[knn]
 class KNNCandidates(val queryVector: VectorWithNorm, val k: Int) extends Serializable {
   private[knn] val candidates = mutable.PriorityQueue.empty[(RowWithVector, Double)] {
