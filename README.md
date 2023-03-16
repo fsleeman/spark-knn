@@ -5,6 +5,11 @@
 [![Build Status](https://travis-ci.org/saurfang/spark-knn.svg)](https://travis-ci.org/saurfang/spark-knn)
 [![codecov.io](http://codecov.io/github/saurfang/spark-knn/coverage.svg?branch=master)](http://codecov.io/github/saurfang/spark-knn?branch=master)
 
+
+## Updated for KD-Tree Implementation
+The new k-dimensional (KD) tree class should be interchangeable with the original hybrid metric-spill tree. While its accuracy may be slightly lower, run time performace could be upto 2-3x faster. The testKDClustering.scala file was also created for performing clustering examples.
+
+
 WIP...
 
 k-Nearest Neighbors algorithm (k-NN) implemented on Apache Spark. This uses a hybrid spill tree approach to
