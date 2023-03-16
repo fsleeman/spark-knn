@@ -419,7 +419,8 @@ class KNN(override val uid: String) extends Estimator[KNNModel] with KNNParams {
         math.max(0, $(bufferSize))
       }
     logInfo("Tau is: " + tau)
-
+    
+    // This section is where the KD tree option was added
     val trees = repartitioned.mapPartitionsWithIndex {
       (partitionId, itr) =>
         val rand = new XORShiftRandom(byteswap64($(seed) ^ partitionId))
