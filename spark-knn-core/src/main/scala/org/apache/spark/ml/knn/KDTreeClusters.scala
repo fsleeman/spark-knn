@@ -173,6 +173,7 @@ object KDTreeCluster {
           (axisIndex, stdDev)
         }
 
+        // TODO - this function may not be needed as minSD
         def getAxisData2(axisIndex: Int): (Int, Double) = {
 
           val sorted: IndexedSeq[(Vector, Double)] = data.map(x => (x.vector.vector, x.vector.vector(axisIndex))).sortBy(_._2)
