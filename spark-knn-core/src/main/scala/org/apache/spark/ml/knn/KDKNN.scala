@@ -19,10 +19,10 @@ trait KDTreeKNNParams extends Params {
   final val outputCol = new Param[String](this, "outputCol", "The output column")
   final val kValue = new Param[Int](this, "kValue", "Value of k-neighbors")
   final val leafSize = new Param[Int](this, "leafSize", "Number of leaf examples in leaf nodes")
-  final val treeSplits = new Param[Int](this, "treeSplits", "Number of leaf examples in leaf nodes")
-  final val treeSplitMethod = new Param[String](this, "treeSplitMethod", "Number of leaf examples in leaf nodes")
-  final val partitions = new Param[Int](this, "partitions", "Number of leaf examples in leaf nodes")
-  final val topTreeLeafSize = new Param[Int](this, "topTreeLeafSize", "Number of leaf examples in leaf nodes")
+  final val treeSplits = new Param[Int](this, "treeSplits", "Number of splits during tree construction")
+  final val treeSplitMethod = new Param[String](this, "treeSplitMethod", "Method use for node splitting")
+  final val partitions = new Param[Int](this, "partitions", "Number data partitions")
+  final val topTreeLeafSize = new Param[Int](this, "topTreeLeafSize", "Number of nodes at the top level of the tree")
   final val number = new Param[Int](parent = this, "number", doc="foo")
 }
 
