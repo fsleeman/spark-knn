@@ -25,7 +25,6 @@ object Classifier {
     df.withColumn("features", convertToVector($"features"))
   }
 
-
   def getPredictedLabel(labels: Array[Int]): Int ={
     val mp: Map[Int, Int] = labels.groupBy(identity).mapValues(_.size)
     if(mp.isEmpty) {
@@ -168,7 +167,6 @@ object Classifier {
       val mappedDF = spark.sqlContext.createDataFrame(mappedResults, df.schema)
 
       val joinedDF = df.union(mappedDF)
-      println("   ~~~ NEW SCHEMA ~~~")
       joinedDF.printSchema()
       joinedDF
     }
