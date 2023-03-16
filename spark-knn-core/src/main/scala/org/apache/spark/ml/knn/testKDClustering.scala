@@ -380,9 +380,8 @@ object KDClustering {
     val clusterCount = 5
 
       /// FIXME - doesnt seem to work if array size is > 1
-      val leafSize =10///(dfCount / clusterCount).toInt //s = Array(100)//,25,100,250,1000)//, 5)
-      //,10,25,50,100,500,1000,2500,5000,10000)
-      val kValues = Array(5)//, 5) //,5,10,25,50,100) //and sqrt(n/2)
+      val leafSize = 10 // NOTE - problem specific, default 10 will be very slow for large datasets
+      val kValues = Array(5)
       val algorithms = if(algorithmsTypes=="all") {
         Array("none", "oversample", "smote", "smotePlus")
       }
