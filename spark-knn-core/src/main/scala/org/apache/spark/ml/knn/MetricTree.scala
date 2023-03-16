@@ -197,6 +197,9 @@ object MetricTree {
 /**
 *
 * KD-Tree
+* This implementation uses the same structure as the original hybrid-spill tree so it can be used interchangeably and other tree algorithms could be
+* added in the same manner.
+*
 */
 
 private[knn]
